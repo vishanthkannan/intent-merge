@@ -2,6 +2,8 @@ const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
 const { PDFDocument } = require("pdf-lib");
+const { applyIntent } = require("../intents");
+
 
 const router = express.Router();
 
@@ -28,7 +30,9 @@ router.post("/merge", upload.array("pdfs"), async (req, res) => {
         .json({ message: "Upload at least 2 PDF files" });
     }
 
-    const mergedPdf = await PDFDocument.create();
+    await applyIntent(intent, mergedPdf);
+    const mergedPdfBytes = await mergedPdf.save();
+
 
     for (const file of req.files) {
       const pdfBytes = fs.readFileSync(file.path);
@@ -44,6 +48,7 @@ router.post("/merge", upload.array("pdfs"), async (req, res) => {
 
     const mergedPdfBytes = await mergedPdf.save();
 
+    
     // ✅ delete uploaded files after merge
     req.files.forEach((file) => fs.unlinkSync(file.path));
 
