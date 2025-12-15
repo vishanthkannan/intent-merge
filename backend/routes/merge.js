@@ -13,14 +13,19 @@ const upload = multer({
     } else {
       cb(new Error("Only PDF files allowed"), false);
     }
-  }
+  },
 });
 
-// POST /api/merge
 router.post("/merge", upload.array("pdfs"), async (req, res) => {
   try {
+    const intent = req.body.intent || "default";
+    console.log("Merge intent:", intent);
+
+
     if (!req.files || req.files.length < 2) {
-      return res.status(400).json({ message: "Upload at least 2 PDFs" });
+      return res
+        .status(400)
+        .json({ message: "Upload at least 2 PDF files" });
     }
 
     const mergedPdf = await PDFDocument.create();
@@ -28,20 +33,29 @@ router.post("/merge", upload.array("pdfs"), async (req, res) => {
     for (const file of req.files) {
       const pdfBytes = fs.readFileSync(file.path);
       const pdf = await PDFDocument.load(pdfBytes);
-      const pages = await mergedPdf.copyPages(pdf,pdf.getPageIndices());
+
+      const pages = await mergedPdf.copyPages(
+        pdf,
+        pdf.getPageIndices()
+      );
+
       pages.forEach((page) => mergedPdf.addPage(page));
     }
 
-    const mergedBytes = await mergedPdf.save();
+    const mergedPdfBytes = await mergedPdf.save();
 
-// Cleanup uploaded files
+    // ✅ delete uploaded files after merge
     req.files.forEach((file) => fs.unlinkSync(file.path));
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition","attachment; filename=merged.pdf");
-    res.send(Buffer.from(mergedBytes));
-  } catch (error) {
-    console.error(error);
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=merged.pdf"
+    );
+
+    res.send(Buffer.from(mergedPdfBytes));
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "PDF merge failed" });
   }
 });
