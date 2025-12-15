@@ -30,9 +30,7 @@ router.post("/merge", upload.array("pdfs"), async (req, res) => {
         .json({ message: "Upload at least 2 PDF files" });
     }
 
-    await applyIntent(intent, mergedPdf);
-    const mergedPdfBytes = await mergedPdf.save();
-
+    const mergedPdf = await PDFDocument.create();
 
     for (const file of req.files) {
       const pdfBytes = fs.readFileSync(file.path);
@@ -46,9 +44,12 @@ router.post("/merge", upload.array("pdfs"), async (req, res) => {
       pages.forEach((page) => mergedPdf.addPage(page));
     }
 
+    // ✅ STEP 4 CONNECTION (THIS IS THE CHANGE)
+    await applyIntent(intent, mergedPdf);
+
+    // save once
     const mergedPdfBytes = await mergedPdf.save();
 
-    
     // ✅ delete uploaded files after merge
     req.files.forEach((file) => fs.unlinkSync(file.path));
 
